@@ -111,12 +111,12 @@ public final class KeyUtils {
 
 	/**
 	 * Adds a key to the StringBuilder
-	 * 
+	 *
 	 * It uses in order of preference:
-	 * 
+	 *
 	 * 1. resultAlias if that was specified as part of the query
 	 * 2. The domain portion of the ObjectName in the query if useObjDomainAsKey is set to true
-	 * 3. else, the Class Name of the MBean. I.e. ClassName will be used by default if the 
+	 * 3. else, the Class Name of the MBean. I.e. ClassName will be used by default if the
 	 * user doesn't specify anything special
 	 * @param query
 	 * @param result
@@ -133,7 +133,8 @@ public final class KeyUtils {
 	}
 
 	private static void addTypeName(Query query, Result result, List<String> typeNames, StringBuilder sb) {
-		String typeName = StringUtils.cleanupStr(query.makeTypeNameValueString(typeNames, result.getTypeName()), query.isAllowDottedKeys());
+		boolean allowDottedTypeNames = (query.isAllowDottedKeys() && !query.isDisallowDottedTypeNames());
+		String typeName = StringUtils.cleanupStr(query.makeTypeNameValueString(typeNames, result.getTypeName()), allowDottedTypeNames);
 		if (typeName != null && typeName.length() > 0) {
 			sb.append(typeName);
 			sb.append(".");

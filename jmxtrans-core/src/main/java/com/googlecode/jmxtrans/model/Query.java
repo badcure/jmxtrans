@@ -73,7 +73,7 @@ import static java.util.Arrays.asList;
  * @author jon
  */
 @JsonSerialize(include = NON_NULL)
-@JsonPropertyOrder(value = {"obj", "attr", "typeNames", "resultAlias", "keys", "allowDottedKeys", "useAllTypeNames", "outputWriters"})
+@JsonPropertyOrder(value = {"obj", "attr", "typeNames", "resultAlias", "keys", "allowDottedKeys", "disallowDottedTypeNames", "useAllTypeNames", "outputWriters"})
 @ThreadSafe
 @EqualsAndHashCode(exclude = {"outputWriters", "outputWriterInstances"})
 @ToString(exclude = {"outputWriters", "typeNameValuesStringBuilder"})
@@ -114,6 +114,7 @@ public class Query {
 	 */
 	@Getter private final boolean useObjDomainAsKey;
 	@Getter private final boolean allowDottedKeys;
+	@Getter private final boolean disallowDottedTypeNames;
 	@Getter private final boolean useAllTypeNames;
 	@Nonnull @Getter private final ImmutableList<OutputWriterFactory> outputWriters;
 	@Nonnull @Getter private final Iterable<OutputWriter> outputWriterInstances;
@@ -128,12 +129,13 @@ public class Query {
 			@JsonProperty("resultAlias") String resultAlias,
 			@JsonProperty("useObjDomainAsKey") boolean useObjDomainAsKey,
 			@JsonProperty("allowDottedKeys") boolean allowDottedKeys,
+			@JsonProperty("disallowDottedTypeNames") boolean disallowDottedTypeNames,
 			@JsonProperty("useAllTypeNames") boolean useAllTypeNames,
 			@JsonProperty("outputWriters") List<OutputWriterFactory> outputWriters
 	) {
 		// For typeName, note the using copyOf does not change the order of
 		// the elements.
-		this(obj, keys, attr, ImmutableSet.copyOf(firstNonNull(typeNames, Collections.<String>emptySet())), resultAlias, useObjDomainAsKey, allowDottedKeys, useAllTypeNames,
+		this(obj, keys, attr, ImmutableSet.copyOf(firstNonNull(typeNames, Collections.<String>emptySet())), resultAlias, useObjDomainAsKey, allowDottedKeys, disallowDottedTypeNames, useAllTypeNames,
 				outputWriters, ImmutableList.<OutputWriter>of());
 	}
 
@@ -145,10 +147,11 @@ public class Query {
 			String resultAlias,
 			boolean useObjDomainAsKey,
 			boolean allowDottedKeys,
+			boolean disallowDottedTypeNames,
 			boolean useAllTypeNames,
 			List<OutputWriterFactory> outputWriters
 	) {
-		this(obj, keys, attr, typeNames, resultAlias, useObjDomainAsKey, allowDottedKeys, useAllTypeNames,
+		this(obj, keys, attr, typeNames, resultAlias, useObjDomainAsKey, allowDottedKeys, disallowDottedTypeNames, useAllTypeNames,
 				outputWriters, ImmutableList.<OutputWriter>of());
 	}
 
@@ -160,10 +163,11 @@ public class Query {
 			String resultAlias,
 			boolean useObjDomainAsKey,
 			boolean allowDottedKeys,
+			boolean disallowDottedTypeNames,
 			boolean useAllTypeNames,
 			ImmutableList<OutputWriter> outputWriters
 	) {
-		this(obj, keys, attr, typeNames, resultAlias, useObjDomainAsKey, allowDottedKeys, useAllTypeNames,
+		this(obj, keys, attr, typeNames, resultAlias, useObjDomainAsKey, allowDottedKeys, disallowDottedTypeNames, useAllTypeNames,
 				ImmutableList.<OutputWriterFactory>of(), outputWriters);
 	}
 
@@ -175,6 +179,7 @@ public class Query {
 			String resultAlias,
 			boolean useObjDomainAsKey,
 			boolean allowDottedKeys,
+			boolean disallowDottedTypeNames,
 			boolean useAllTypeNames,
 			List<OutputWriterFactory> outputWriterFactories,
 			List<OutputWriter> outputWriters
@@ -189,10 +194,11 @@ public class Query {
 		this.useObjDomainAsKey = firstNonNull(useObjDomainAsKey, false);
 		this.keys = copyOf(firstNonNull(keys, Collections.<String>emptyList()));
 		this.allowDottedKeys = allowDottedKeys;
+		this.disallowDottedTypeNames = disallowDottedTypeNames;
 		this.useAllTypeNames = useAllTypeNames;
 		this.outputWriters = copyOf(firstNonNull(outputWriterFactories, ImmutableList.<OutputWriterFactory>of()));
 		// We need to preserve the order of typeNames. So note that copyOf
-		// does not mess with the order. 
+		// does not mess with the order.
 		this.typeNames = ImmutableSet.copyOf(firstNonNull(typeNames, Collections.<String>emptySet()));
 
 		this.typeNameValuesStringBuilder = makeTypeNameValuesStringBuilder();
@@ -242,7 +248,7 @@ public class Query {
 	}
 
 	private TypeNameValuesStringBuilder makeTypeNameValuesStringBuilder() {
-		String separator = isAllowDottedKeys() ? "." : TypeNameValuesStringBuilder.DEFAULT_SEPARATOR;
+		String separator = (isAllowDottedKeys() && !isDisallowDottedTypeNames()) ? "." : TypeNameValuesStringBuilder.DEFAULT_SEPARATOR;
 		Set<String> typeNames = getTypeNames();
 		if (isUseAllTypeNames()) {
 			return new UseAllTypeNameValuesStringBuilder(separator);
@@ -277,6 +283,7 @@ public class Query {
 		private final List<String> keys = newArrayList();
 		@Setter private boolean useObjDomainAsKey;
 		@Setter private boolean allowDottedKeys;
+		@Setter private boolean disallowDottedTypeNames;
 		@Setter private boolean useAllTypeNames;
 		private final List<OutputWriterFactory> outputWriterFactories = newArrayList();
 		private final List<OutputWriter> outputWriters = newArrayList();
@@ -294,6 +301,7 @@ public class Query {
 			this.keys.addAll(query.keys);
 			this.useObjDomainAsKey = query.useObjDomainAsKey;
 			this.allowDottedKeys = query.allowDottedKeys;
+			this.disallowDottedTypeNames = query.disallowDottedTypeNames;
 			this.useAllTypeNames = query.useAllTypeNames;
 			this.typeNames.addAll(query.typeNames);
 		}
@@ -341,6 +349,7 @@ public class Query {
 						this.resultAlias,
 						this.useObjDomainAsKey,
 						this.allowDottedKeys,
+						this.disallowDottedTypeNames,
 						this.useAllTypeNames,
 						this.outputWriterFactories
 				);
@@ -353,6 +362,7 @@ public class Query {
 					this.resultAlias,
 					this.useObjDomainAsKey,
 					this.allowDottedKeys,
+					this.disallowDottedTypeNames,
 					this.useAllTypeNames,
 					copyOf(this.outputWriters)
 			);
